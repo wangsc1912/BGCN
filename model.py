@@ -19,33 +19,47 @@ class GCN(nn.Module):
         print('num_features_nonzero:', num_features_nonzero)
 
 
-        self.layers = nn.Sequential(GraphConvolution(self.input_dim, args.hidden, num_features_nonzero,
+        self.conv1 = GraphConvolution(self.input_dim, args.hidden, num_features_nonzero,
                                                      activation=F.relu,
                                                      dropout=args.dropout,
-                                                     is_sparse_inputs=True),
+                                                     is_sparse_inputs=False)
 
-                                    GraphConvolution(args.hidden, output_dim, num_features_nonzero,
+        self.conv2 = GraphConvolution(args.hidden, output_dim, num_features_nonzero,
                                                      activation=F.relu,
                                                      dropout=args.dropout,
-                                                     is_sparse_inputs=False),
+                                                     is_sparse_inputs=False)
 
-                                    )
+        
+        # self.layers = nn.Sequential(GraphConvolution(self.input_dim, args.hidden, num_features_nonzero,
+        #                                              activation=F.relu,
+        #                                              dropout=args.dropout,
+        #                                              is_sparse_inputs=True),
+
+        #                             GraphConvolution(args.hidden, output_dim, num_features_nonzero,
+        #                                              activation=F.relu,
+        #                                              dropout=args.dropout,
+        #                                              is_sparse_inputs=False),
+
+        #                             )
 
     def forward(self, inputs):
         x, support = inputs
 
-        x = self.layers((x, support))
+        # x = self.layers((x, support))
+        x, support = self.conv1((x, support))
+        x = self.conv2((x, support))
 
         return x
 
     def l2_loss(self):
 
-        layer = self.layers.children()
-        layer = next(iter(layer))
+        # layer = self.layers.children()
+        # layer = next(iter(layer))
 
+        layer = self.conv2
         loss = None
 
-        for p in layer.parameters():
+        for name, p in layer.named_parameters():
             if loss is None:
                 loss = p.pow(2).sum()
             else:

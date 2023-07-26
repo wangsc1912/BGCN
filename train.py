@@ -8,7 +8,7 @@ from    data import load_data, preprocess_features, preprocess_adj
 from    model import GCN
 from    config import  args
 from    utils import masked_loss, masked_acc
-
+import os
 
 seed = 123
 np.random.seed(seed)
@@ -26,17 +26,18 @@ print('mask:', train_mask.shape, val_mask.shape, test_mask.shape)
 features = preprocess_features(features) # [49216, 2], [49216], [2708, 1433]
 supports = preprocess_adj(adj)
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 device = torch.device('cuda')
 train_label = torch.from_numpy(y_train).long().to(device)
 num_classes = train_label.shape[1]
 train_label = train_label.argmax(dim=1)
-train_mask = torch.from_numpy(train_mask.astype(np.int)).to(device)
+train_mask = torch.from_numpy(train_mask.astype(np.int64)).to(device)
 val_label = torch.from_numpy(y_val).long().to(device)
 val_label = val_label.argmax(dim=1)
-val_mask = torch.from_numpy(val_mask.astype(np.int)).to(device)
+val_mask = torch.from_numpy(val_mask.astype(np.int64)).to(device)
 test_label = torch.from_numpy(y_test).long().to(device)
 test_label = test_label.argmax(dim=1)
-test_mask = torch.from_numpy(test_mask.astype(np.int)).to(device)
+test_mask = torch.from_numpy(test_mask.astype(np.int64)).to(device)
 
 i = torch.from_numpy(features[0]).long().to(device)
 v = torch.from_numpy(features[1]).to(device)
@@ -62,6 +63,7 @@ for epoch in range(args.epochs):
     out = net((feature, support))
     out = out[0]
     loss = masked_loss(out, train_label, train_mask)
+    # loss += args.weight_decay * net.l2_loss()
     loss += args.weight_decay * net.l2_loss()
 
     acc = masked_acc(out, train_label, train_mask)
